@@ -117,13 +117,13 @@
       '<div class="actions" style="margin:10px 0"><button class="btn primary" id="cal-new">+ Termin' + (calSel ? ' am ' + deDate(calSel) : '') + '</button>' + (calSel ? '<button class="btn" id="cal-all">Alle kommenden zeigen</button>' : '') + (P.cal.length ? '<button class="btn" id="cal-export">Alle in den Handy-Kalender</button>' : '') + '</div>' +
       '<div id="cal-form"' + (calEdit ? '' : ' hidden') + ' class="cal-form"><h3>' + (editing ? 'Termin bearbeiten' : 'Neuer Termin') + '</h3>' +
         '<label>Art<select id="cf-type" class="sel">' + TYPES.map(function (t) { return '<option value="' + t[0] + '"' + (f.type === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></label>' +
-        '<label>Lernfeld / Fach<select id="cf-subj" class="sel"><option value="">– ohne –</option>' + subjects().map(function (x) { return '<option value="' + x[0] + '"' + (f.subj === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</select></label>' +
-        '<label>Titel<input id="cf-title" class="gq" value="' + esc(f.title) + '" placeholder="z. B. Wohnfläche und Kaution (oder leer lassen)"></label>' +
+        '<label>Fach<select id="cf-subj" class="sel"><option value="">– ohne –</option>' + subjects().map(function (x) { return '<option value="' + x[0] + '"' + (f.subj === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</select></label>' +
+        '<label>Titel<input id="cf-title" class="gq" value="' + esc(f.title) + '" placeholder="z. B. Lineare Funktionen (oder leer lassen)"></label>' +
         '<div class="cf-row"><label>Datum<input type="date" id="cf-date" class="gq" value="' + esc(f.date) + '"></label><label>bis (optional)<input type="date" id="cf-end" class="gq" value="' + esc(f.end || '') + '"></label><label>Uhrzeit<input type="time" id="cf-time" class="gq" value="' + esc(f.time || '') + '"></label></div>' +
-        '<label>Notiz<textarea id="cf-note" class="gq" rows="2" placeholder="z. B. Themen: Kaution, Wohnfläche">' + esc(f.note || '') + '</textarea></label>' +
+        '<label>Notiz<textarea id="cf-note" class="gq" rows="2" placeholder="z. B. Themen laut Lehrkraft">' + esc(f.note || '') + '</textarea></label>' +
         '<div class="actions"><button class="btn primary" id="cf-save">Speichern</button><button class="btn" id="cf-cancel">Abbrechen</button>' + (editing ? '<button class="btn" id="cf-del">Löschen</button>' : '') + '</div></div>' +
       '<div class="section-title">' + (calSel ? 'Termine am ' + deDate(calSel) : 'Kommende Termine') + '</div>' +
-      (list.length ? '<ul class="cal-list">' + list.map(entryHtml).join('') + '</ul>' : '<p class="hint">' + (calSel ? 'Keine Termine an diesem Tag.' : 'Noch keine Termine. Trag Klassenarbeiten, Schulblöcke und Prüfungen ein.') + '</p>') + '</div>';
+      (list.length ? '<ul class="cal-list">' + list.map(entryHtml).join('') + '</ul>' : '<p class="hint">' + (calSel ? 'Keine Termine an diesem Tag.' : 'Noch keine Termine. Trag Klassenarbeiten und Tests mit Fach ein.') + '</p>') + '</div>';
     var b = function (id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); };
     b('#cal-prev', function () { calMonth = new Date(y, m - 1, 1); viewCal(main); });
     b('#cal-next', function () { calMonth = new Date(y, m + 1, 1); viewCal(main); });

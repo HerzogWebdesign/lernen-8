@@ -559,3 +559,35 @@ table.tt thead th.today{background:var(--accent);color:var(--accent-ink)}
 @media (max-width:420px){.qactions.three .btn{font-size:15px;padding-left:4px;padding-right:4px}.frage{font-size:18px}}
 .formel{font-size:24px;font-weight:700;text-align:center;white-space:nowrap;margin:0 0 16px;padding:10px;border-radius:10px;background:var(--accent-soft)}
 .card .formel{color:#1d232b;background:#eef3fa}
+
+/* ---------- Klassenarbeiten und Elternblick ---------- */
+.exam-banner{display:flex;flex-direction:column;gap:2px;text-decoration:none;background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--radius);padding:12px 16px;margin:4px 0 12px;color:var(--ink)}
+.exam-banner b{color:var(--warn);font-size:17px}
+.exam-banner span{font-size:14px}
+.sbar{display:flex;height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:6px 0 4px}
+.sbar i{display:block;height:100%}
+.sbar i.s{background:var(--accent)}
+.sbar i.w{background:var(--warn)}
+.exam-list{list-style:none;padding:0;margin:0 0 12px;display:grid;gap:8px}
+.exam-list a{display:flex;flex-direction:column;gap:2px;text-decoration:none;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px}
+.exam-list small{color:var(--muted)}
+.wbars{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:12px 0 4px}
+.wb{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px}
+.wb .wcol{width:100%;max-width:34px;height:70px;display:flex;align-items:flex-end;background:var(--accent-soft);border-radius:6px;overflow:hidden}
+.wb .wcol i{display:block;width:100%;background:var(--accent)}
+.wb span{color:var(--muted)}
+.wb.heute span{color:var(--ink);font-weight:700}
+.tablewrap{overflow-x:auto}
+.ftable{width:100%;border-collapse:collapse}
+.ftable th{text-align:left;font-weight:600;font-size:15px;padding:8px 12px 8px 0;vertical-align:top;white-space:nowrap}
+.ftable td{width:100%;padding:6px 0;border-bottom:1px solid var(--line)}
+.ftable th{border-bottom:1px solid var(--line)}
+.pinf{display:grid;gap:10px;max-width:320px}
+.rewardf{display:grid;gap:6px;max-width:420px;color:var(--ink)}
+.t-sub.reward{color:var(--ink);font-weight:600}
+@media (max-width:420px){.ftable th{white-space:normal;font-size:14px}}
+@media print{
+  body.p-eltern main{display:block !important}
+  body.p-eltern #sheet,body.p-eltern .noprint,body.p-eltern .totop,body.p-eltern .rewardf .actions{display:none !important}
+  body.p-eltern .today,body.p-eltern .exam-list a{break-inside:avoid}
+}

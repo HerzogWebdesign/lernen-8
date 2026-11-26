@@ -1,5 +1,5 @@
 /* Offline-Speicher: alle Dateien der App werden beim ersten Öffnen auf dem Gerät abgelegt. */
-var VERSION = 'lernen-8-v9';
+var VERSION = 'lernen-8-v10';
 var FILES = [
   './', 'index.html', 'styles.css', 'app.js', 'pdf.js', 'plan.js', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',

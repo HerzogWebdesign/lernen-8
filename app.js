@@ -21,10 +21,10 @@
 
   /* ---------- Speicher (nur lokal auf dem Gerät) ---------- */
   var KEY = 'lernen-8-v1';
-  var S = { done: {}, star: {}, notes: {}, box: {}, qs: {}, hl: {}, bag: {}, days: {}, stars: 0 };
+  var S = { done: {}, star: {}, notes: {}, box: {}, qs: {}, hl: {}, bag: {}, days: {}, stars: 0, exams: {}, tests: [] };
   try {
     var raw = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (raw) S = { done: raw.done || {}, star: raw.star || {}, notes: raw.notes || {}, box: raw.box || {}, qs: raw.qs || {}, hl: raw.hl || {}, bag: raw.bag || {}, days: raw.days || {}, stars: raw.stars || 0 };
+    if (raw) S = { done: raw.done || {}, star: raw.star || {}, notes: raw.notes || {}, box: raw.box || {}, qs: raw.qs || {}, hl: raw.hl || {}, bag: raw.bag || {}, days: raw.days || {}, stars: raw.stars || 0, exams: raw.exams || {}, tests: raw.tests || [] };
   } catch (e) {}
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
   function isDone(id) { return !!S.done[id]; }
@@ -174,7 +174,7 @@
       '<div class="t-box"><b>⭐ ' + (S.stars || 0) + '</b><span>Sterne</span></div></div>' +
       (r >= g ? '<p class="t-msg">Tagesziel geschafft! Mehr geht, muss aber nicht.</p>' : '') +
       '<a class="btn primary big" href="#/runde">' + (r ? 'Noch eine Runde' : 'Runde starten') + ' · 5 Minuten</a>' +
-      '<p class="muted t-sub">' + (due ? due + ' Karten sind heute dran. Eine Runde = höchstens 10 Karten.' : 'Heute ist nichts fällig. Eine Runde wiederholt trotzdem.') + '</p></section>';
+      rewardLine() + '<p class="muted t-sub">' + (due ? due + ' Karten sind heute dran. Eine Runde = höchstens 10 Karten.' : 'Heute ist nichts fällig. Eine Runde wiederholt trotzdem.') + '</p></section>';
   }
 
   /* ---------- Startseite ---------- */
@@ -192,11 +192,11 @@
     var qb = function (href, label, num) { return '<a class="qbtn" href="' + href + '"><b>' + label + '</b><small>' + num + '</small></a>'; };
     var html = '<div class="content" style="max-width:none">' +
       '<h1 class="home-h1">8. Klasse<span>Regionale Schule · Mecklenburg-Vorpommern</span></h1>' +
-      todayPanel() +
+      examBanner() + todayPanel() +
       '<p class="lead">' + all + ' Lernkarten · ' + d + ' sicher · ' + stars + ' auf dem Merkzettel.</p>' +
       '<div class="quickgrid">' + qb('#/abfragen', 'Karteikasten', due + ' fällig') + qb('#/pruefung', 'Üben', FRAGEN.length + ' Aufgaben') +
-      qb('#/merken', 'Merkzettel', stars + ' Karten') + qb('#/plan', 'Stundenplan', 'Mo–Fr') + qb('#/kalender', 'Termine', (window.ImmoPlan ? window.ImmoPlan.data().cal.length : 0) + ' Einträge') +
-      (GLOSSAR.length ? qb('#/az', 'A–Z', GLOSSAR.length + ' Begriffe') : '') + '</div>' +
+      qb('#/merken', 'Merkzettel', stars + ' Karten') + qb('#/arbeit', 'Klassenarbeiten', exams().length + ' geplant') + qb('#/plan', 'Stundenplan', 'Mo–Fr') + qb('#/kalender', 'Termine', (function (n) { return n + (n === 1 ? ' Eintrag' : ' Einträge'); })(window.ImmoPlan ? window.ImmoPlan.data().cal.length : 0)) +
+      (GLOSSAR.length ? qb('#/az', 'A–Z', GLOSSAR.length + ' Begriffe') : '') + qb('#/eltern', 'Elternblick', 'mit Zahl') + '</div>' +
       (window.ImmoPlan ? window.ImmoPlan.nextHtml() : '') +
       '<div class="section-title">Fächer</div><div class="tiles">' + AREAS.map(tile).join('') + '</div>' +
       '<div class="section-title">Gut zu wissen</div><div class="hint">Grundlage sind die Rahmenpläne des Landes Mecklenburg-Vorpommern für die Regionale Schule, Klasse 8. Deine Schule kann Reihenfolge und Themen anders verteilen – Stellen mit ⚠ zeigen das.</div>' +
@@ -220,7 +220,7 @@
       f.text().then(function (t) {
         var j = JSON.parse(t); if (!j || j.app !== 'lernen-8' || !j.data) throw new Error('x');
         if (!confirm('Sicherung laden? Der jetzige Stand auf diesem Gerät wird ersetzt.')) return;
-        var x = j.data; S = { done: x.done || {}, star: x.star || {}, notes: x.notes || {}, box: x.box || {}, qs: x.qs || {}, hl: x.hl || {}, bag: x.bag || {}, days: x.days || {}, stars: x.stars || 0 }; save(); if (j.plan && window.ImmoPlan) window.ImmoPlan.restore(j.plan); viewHome();
+        var x = j.data; S = { done: x.done || {}, star: x.star || {}, notes: x.notes || {}, box: x.box || {}, qs: x.qs || {}, hl: x.hl || {}, bag: x.bag || {}, days: x.days || {}, stars: x.stars || 0, exams: x.exams || {}, tests: x.tests || [] }; save(); if (j.plan && window.ImmoPlan) window.ImmoPlan.restore(j.plan); viewHome();
       }).catch(function () { alert('Diese Datei ist keine Sicherung von Lernen 8.'); });
     });
   }
@@ -442,8 +442,11 @@
   var MOVES = ['10 Hampelmänner', '1 Glas Wasser trinken', 'einmal ums Haus oder durch die Wohnung gehen', '20 Sekunden auf einem Bein stehen, dann das andere', '5 Kniebeugen und ganz lang strecken', 'Fenster auf und 5 tiefe Atemzüge'];
   var round = null;
   function roundPool(b) {
-    var list = scopeList(b), due = dueList(list);
-    var pick = (due.length ? due : list).slice().sort(function (x, y) { return boxOf(x.sub.id).f - boxOf(y.sub.id).f || Math.random() - 0.5; });
+    var list = scopeList(b), isExam = String(b).indexOf('exam:') === 0, now = Date.now();
+    // Klassenarbeit: alles, was noch nicht sicher oder fällig ist; sonst nur Fälliges, Karten naher Klassenarbeiten zuerst
+    var due = isExam ? list.filter(function (e) { return cardState(e.sub.id) !== 'sicher' || boxOf(e.sub.id).due <= now; }) : dueList(list);
+    var pri = {}; if (!isExam) exams().filter(function (x) { return daysUntil(x.date) <= 7; }).forEach(function (x) { examSubs(x).forEach(function (e) { pri[e.sub.id] = 1; }); });
+    var pick = (due.length ? due : list).slice().sort(function (x, y) { return ((pri[y.sub.id] ? 1 : 0) - (pri[x.sub.id] ? 1 : 0)) || boxOf(x.sub.id).f - boxOf(y.sub.id).f || Math.random() - 0.5; });
     return pick.slice(0, ROUND_N).map(function (e) { return e.sub.id; });
   }
   function viewRound(params) {
@@ -455,7 +458,7 @@
       main.innerHTML = '<div class="content"><div class="crumb"><a href="#/">Start</a> › Runde</div><h1>Eine Runde</h1>' +
         '<ol class="steps"><li><b>Frage lesen</b> und im Kopf antworten (oder laut sagen).</li><li><b>Umdrehen</b> und vergleichen.</li><li>Ehrlich sagen: <b>Wusste ich · Halb · Noch nicht</b>. Alles ist okay – jede Karte bringt einen Stern.</li></ol>' +
         '<fieldset><legend>Welches Fach?</legend><select id="scope" class="sel"><option value="all">Alle Fächer</option>' +
-        AREAS.map(function (a) { return '<option value="' + a.id + '"' + (b === a.id ? ' selected' : '') + '>' + esc(plain(a.title)) + '</option>'; }).join('') + '</select></fieldset>' +
+        (String(b).indexOf('exam:') === 0 ? '<option value="' + esc(b) + '" selected>' + esc(scopeName(b)) + '</option>' : '') + AREAS.map(function (a) { return '<option value="' + a.id + '"' + (b === a.id ? ' selected' : '') + '>' + esc(plain(a.title)) + '</option>'; }).join('') + '</select></fieldset>' +
         '<p class="count">' + (due ? due + ' Karten sind fällig.' : 'Heute ist nichts fällig – wir wiederholen die unsichersten Karten.') + ' Diese Runde: ' + n + ' Karten, höchstens 5 Minuten.</p>' +
         (n ? '<div class="actions"><a class="btn primary big" href="#/runde?b=' + b + '&go=1&n=' + Date.now() + '">Los geht’s</a></div>' : '<p class="hint">In diesem Fach gibt es noch keine Karten.</p>') + '</div>';
       $('#scope').addEventListener('change', function (ev) { location.hash = '#/runde?b=' + ev.target.value; });
@@ -517,16 +520,134 @@
     });
   }
 
+  /* ---------- Klassenarbeiten (KONZEPT.md H): Termine kommen aus dem Kalender (Art Klassenarbeit/Test/Vokabeltest + Fach) ---------- */
+  var EXAM_TYPES = { ka: 'Klassenarbeit', test: 'Test', vok: 'Vokabeltest' };
+  function fmtDay(k) { var p = String(k).split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]); return ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ', ' + p[2] + '.' + p[1] + '.' + p[0]; }
+  function daysUntil(k) { var p = String(k).split('-'), t = new Date(+p[0], +p[1] - 1, +p[2]), n = new Date(); n = new Date(n.getFullYear(), n.getMonth(), n.getDate()); return Math.round((t - n) / DAY); }
+  function exams(withPast) {
+    var cal = window.ImmoPlan ? window.ImmoPlan.data().cal : [];
+    return cal.filter(function (e) { return EXAM_TYPES[e.type] && e.subj && BYID[e.subj] && BYID[e.subj].type === 'area' && (withPast || daysUntil(e.date) >= 0); })
+      .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
+  function examById(id) { return exams(true).filter(function (e) { return e.id === id; })[0]; }
+  function examTopics(ex) { var a = BYID[ex.subj].area, sel = (S.exams || {})[ex.id]; return a.topics.filter(function (t) { return !sel || sel.indexOf(t.id) >= 0; }); }
+  function examSubs(ex) { var ids = {}; examTopics(ex).forEach(function (t) { t.subs.forEach(function (s) { ids[s.id] = 1; }); }); return SUBS.filter(function (e) { return ids[e.sub.id]; }); }
+  function cardState(id) { var b = S.box[id]; if (!b) return 'neu'; return b.f >= SICHER ? 'sicher' : 'wackelig'; }
+  function stateCounts(list) { var c = { sicher: 0, wackelig: 0, neu: 0 }; list.forEach(function (e) { c[cardState(e.sub.id)]++; }); return c; }
+  function examLabel(ex) { return EXAM_TYPES[ex.type] + ' ' + plain(BYID[ex.subj].area.title); }
+  function whenText(d) { return d === 0 ? 'heute' : d === 1 ? 'morgen' : d < 0 ? 'vorbei' : 'in ' + d + ' Tagen'; }
+  function stateBar(c) {
+    var n = (c.sicher + c.wackelig + c.neu) || 1;
+    return '<div class="sbar" aria-hidden="true"><i class="s" style="width:' + (c.sicher * 100 / n).toFixed(1) + '%"></i><i class="w" style="width:' + (c.wackelig * 100 / n).toFixed(1) + '%"></i></div>' +
+      '<small class="muted">' + c.sicher + ' sicher · ' + c.wackelig + ' wackelig · ' + c.neu + ' neu</small>';
+  }
+  function examHint(ex) { var d = daysUntil(ex.date); return d === 3 || d === 1 ? 'Heute ist Mini-Test-Tag: 10 Fragen, etwa 5 Minuten.' : d === 0 ? 'Viel Erfolg heute! Schau dir kurz die wackeligen Karten an.' : ''; }
+  function examBanner() {
+    var ex = exams().filter(function (e) { return daysUntil(e.date) <= 7; })[0]; if (!ex) return '';
+    var h = examHint(ex);
+    return '<a class="exam-banner" href="#/arbeit?id=' + esc(ex.id) + '"><b>' + esc(examLabel(ex)) + ' ' + whenText(daysUntil(ex.date)) + '</b><span>' + esc(h || 'Jetzt vorbereiten: Lernrunden und Mini-Test') + '</span></a>';
+  }
+  function examLi(ex) {
+    return '<li><a href="#/arbeit?id=' + esc(ex.id) + '"><b>' + esc(examLabel(ex)) + '</b><small>' + esc(fmtDay(ex.date)) + ' · ' + whenText(daysUntil(ex.date)) + '</small>' + stateBar(stateCounts(examSubs(ex))) + '</a></li>';
+  }
+  function viewExams(params) {
+    setNav(''); document.title = 'Klassenarbeiten – Lernen 8';
+    var one = params.id && examById(params.id);
+    if (one) return viewExam1(one);
+    var list = exams();
+    main.innerHTML = '<div class="content"><div class="crumb"><a href="#/">Start</a> › Klassenarbeiten</div><h1>Klassenarbeiten</h1>' +
+      '<p class="lead">Trag Klassenarbeiten und Tests mit Fach im Kalender ein. Dann zieht die App die passenden Karten vor und erinnert dich an den Mini-Test 3 Tage und 1 Tag vorher.</p>' +
+      '<div class="actions"><a class="btn primary" href="#/kalender">+ Klassenarbeit eintragen</a></div>' +
+      (list.length ? '<ul class="exam-list">' + list.map(examLi).join('') + '</ul>'
+        : '<p class="hint">Noch keine Klassenarbeit eingetragen. Wähle im Kalender die Art „Klassenarbeit“ oder „Test“ und das Fach.</p>') + '</div>';
+  }
+  function viewExam1(ex) {
+    var a = BYID[ex.subj].area, sel = (S.exams || {})[ex.id], d = daysUntil(ex.date), subs = examSubs(ex), c = stateCounts(subs);
+    var todo = c.wackelig + c.neu, perDay = d > 0 ? Math.ceil(todo / d) : todo, h = examHint(ex);
+    var wobbly = subs.filter(function (e) { return cardState(e.sub.id) === 'wackelig'; });
+    main.innerHTML = '<div class="content"><div class="crumb"><a href="#/arbeit">Klassenarbeiten</a> › ' + esc(plain(a.title)) + '</div>' +
+      '<h1>' + esc(examLabel(ex)) + '</h1><p class="lead">' + esc(fmtDay(ex.date)) + ' – ' + whenText(d) + '.' + (ex.note ? '<br><small>' + esc(ex.note) + '</small>' : '') + '</p>' +
+      (h ? '<p class="t-msg">' + esc(h) + '</p>' : '') +
+      '<div class="today">' + stateBar(c) + '<p class="t-sub">' + (todo ? (d > 0 ? 'Plan: etwa ' + perDay + ' Karten pro Tag bis zur Arbeit.' : 'Heute: die wackeligen Karten noch einmal ansehen.') : 'Alle Karten sind sicher. Ein Mini-Test zeigt, ob es hält.') + '</p>' +
+      '<div class="actions"><a class="btn primary" href="#/runde?b=exam:' + esc(ex.id) + '&go=1&n=' + Date.now() + '">Lernrunde für diese Arbeit</a><a class="btn" href="#/pruefung?b=exam:' + esc(ex.id) + '&go=1&n=10">Mini-Test (10 Fragen)</a></div></div>' +
+      '<div class="section-title">Welche Themen kommen dran?</div><p class="muted" style="font-size:14px;margin-top:0">Frag deine Lehrkraft oder schau ins Heft. Ohne Auswahl gelten alle Themen.</p>' +
+      '<ul class="flist">' + a.topics.map(function (t) {
+        return '<li><label><input type="checkbox" class="extop" value="' + esc(t.id) + '"' + (!sel || sel.indexOf(t.id) >= 0 ? ' checked' : '') + '><span>' + md(t.title) + ' <small>(' + t.subs.length + ' Karten)</small></span></label></li>';
+      }).join('') + '</ul>' +
+      (wobbly.length ? '<div class="section-title">Diese Karten wackeln noch</div><div class="results">' + wobbly.map(function (e) { return subLink(e); }).join('') + '</div>' : '') + '</div>';
+    main.querySelectorAll('.extop').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        var ids = Array.prototype.filter.call(main.querySelectorAll('.extop'), function (x) { return x.checked; }).map(function (x) { return x.value; });
+        S.exams = S.exams || {};
+        if (!ids.length || ids.length === a.topics.length) delete S.exams[ex.id]; else S.exams[ex.id] = ids;
+        save(); viewExam1(ex);
+      });
+    });
+  }
+
+  /* ---------- Elternblick (KONZEPT.md J): einfache Zahlensperre auf diesem Gerät, kein Konto ---------- */
+  var parentOpen = false;
+  function viewParents() {
+    setNav(''); document.title = 'Elternblick – Lernen 8';
+    var pin = getPref('pin', '');
+    if (!parentOpen) {
+      main.innerHTML = '<div class="content"><div class="crumb"><a href="#/">Start</a> › Elternblick</div><h1>Elternblick</h1>' +
+        '<p class="lead">' + (pin ? 'Bitte die Eltern-Zahl eingeben.' : 'Lege eine Zahl mit 4 bis 8 Ziffern fest. Sie schützt diesen Bereich auf diesem Gerät.') + '</p>' +
+        '<form id="pinf" class="pinf"><input id="pin" class="gq" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Eltern-Zahl" placeholder="Zahl">' +
+        (pin ? '' : '<input id="pin2" class="gq" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Zahl wiederholen" aria-label="Zahl wiederholen">') +
+        '<button class="btn primary" type="submit">' + (pin ? 'Öffnen' : 'Festlegen') + '</button><p id="pinmsg" class="muted" aria-live="polite"></p></form>' +
+        '<p class="muted" style="font-size:13px">Die Zahl ist nur eine einfache Sperre auf diesem Gerät, kein sicherer Passwortschutz.</p></div>';
+      $('#pinf').addEventListener('submit', function (ev) {
+        ev.preventDefault(); var v = $('#pin').value.trim();
+        if (!/^\d{4,8}$/.test(v)) { $('#pinmsg').textContent = 'Bitte 4 bis 8 Ziffern eingeben.'; return; }
+        if (!pin) { if ($('#pin2').value.trim() !== v) { $('#pinmsg').textContent = 'Die beiden Zahlen sind verschieden.'; return; } setPref('pin', v); }
+        else if (v !== pin) { $('#pinmsg').textContent = 'Die Zahl stimmt nicht.'; $('#pin').value = ''; return; }
+        parentOpen = true; viewParents();
+      });
+      return;
+    }
+    var now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 6) % 7), week = [], sum = 0, max = goal();
+    for (var i = 0; i < 7; i++) { var dd = new Date(mon); dd.setDate(mon.getDate() + i); var r = S.days[dayKey(dd)] || 0; week.push([['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][i], r, dayKey(dd) === dayKey()]); sum += r; max = Math.max(max, r); }
+    var st = streak(), ex = exams(), tests = (S.tests || []).slice(-5).reverse();
+    var reward = getPref('reward', ''), rgoal = parseInt(getPref('rewardgoal', '0'), 10) || 0;
+    var bars = '<div class="wbars">' + week.map(function (w) {
+      return '<div class="wb' + (w[2] ? ' heute' : '') + '"><div class="wcol"><i style="height:' + Math.round(w[1] * 100 / max) + '%"></i></div><b>' + w[1] + '</b><span>' + w[0] + '</span></div>';
+    }).join('') + '</div>';
+    var rows = AREAS.map(function (a) { return '<tr><th>' + esc(plain(a.title)) + '</th><td>' + stateBar(stateCounts(SUBS.filter(function (e) { return e.area === a; }))) + '</td></tr>'; }).join('');
+    main.innerHTML = '<div class="content eltern"><div class="crumb"><a href="#/">Start</a> › Elternblick</div><h1>Elternblick</h1>' +
+      '<p class="lead">Stand: ' + esc(fmtDay(dayKey())) + '. Alle Zahlen kommen nur von diesem Gerät.</p>' +
+      '<div class="section-title">Diese Woche</div><div class="today"><div class="t-row"><div class="t-box"><b>' + sum + '</b><span>Runden</span></div><div class="t-box"><b>' + st.n + '</b><span>Tage Serie</span></div><div class="t-box"><b>⭐ ' + (S.stars || 0) + '</b><span>Sterne</span></div></div>' + bars +
+      '<p class="t-sub">Tagesziel: ' + goal() + (goal() === 1 ? ' Runde' : ' Runden') + ' (änderbar auf der Startseite)</p></div>' +
+      '<div class="section-title">Nächste Klassenarbeiten</div>' + (ex.length ? '<ul class="exam-list">' + ex.slice(0, 5).map(examLi).join('') + '</ul>' : '<p class="hint">Keine eingetragen. Im <a href="#/kalender">Kalender</a> mit Art „Klassenarbeit“ und Fach eintragen.</p>') +
+      '<div class="section-title">Letzte Mini-Tests</div>' + (tests.length ? '<ul class="cal-list mini">' + tests.map(function (t) { return '<li>' + esc(fmtDay(t.d)) + ' · ' + esc(scopeName(t.b)) + ': ' + t.pts + ' von ' + t.n + ' gelöst</li>'; }).join('') + '</ul>' : '<p class="hint">Noch kein Mini-Test gemacht.</p>') +
+      '<div class="section-title">Stand je Fach</div><div class="tablewrap"><table class="ftable">' + rows + '</table></div>' +
+      '<div class="section-title">Belohnung</div><div class="hint rewardf"><label for="rgoal">Bei so vielen Sternen</label><input id="rgoal" class="gq" inputmode="numeric" value="' + (rgoal || '') + '" placeholder="z. B. 150">' +
+      '<label for="rtext">gibt es</label><input id="rtext" class="gq" value="' + esc(reward) + '" placeholder="z. B. einen Kinoabend">' +
+      '<div class="actions"><button class="btn" id="rsave" type="button">Speichern</button><span id="rmsg" class="muted" aria-live="polite"></span></div></div>' +
+      '<div class="section-title">Mehr</div><div class="actions noprint"><button class="btn" id="pprint" type="button">Wochenblatt drucken</button><button class="btn" id="pchange" type="button">Eltern-Zahl ändern</button><button class="btn" id="plock" type="button">Sperren</button></div></div>';
+    $('#rsave').addEventListener('click', function () { setPref('reward', $('#rtext').value.trim()); setPref('rewardgoal', String(parseInt($('#rgoal').value, 10) || 0)); $('#rmsg').textContent = '✓ gespeichert'; });
+    $('#pprint').addEventListener('click', function () { document.body.classList.add('p-eltern'); setTimeout(function () { window.print(); }, 60); });
+    $('#pchange').addEventListener('click', function () { setPref('pin', ''); parentOpen = false; viewParents(); });
+    $('#plock').addEventListener('click', function () { parentOpen = false; location.hash = '#/'; });
+  }
+  function rewardLine() {
+    var reward = getPref('reward', ''), rgoal = parseInt(getPref('rewardgoal', '0'), 10) || 0;
+    if (!reward || !rgoal) return '';
+    var left = rgoal - (S.stars || 0);
+    return '<p class="t-sub reward">' + (left > 0 ? '🎁 Noch ' + left + ' Sterne bis: ' + esc(reward) : '🎁 Geschafft: ' + esc(reward) + '!') + '</p>';
+  }
+
   /* ---------- Karteikasten ---------- */
   function boxOf(id) { return S.box[id] || { f: 1, due: 0 }; }
   function dueList(list) { var now = Date.now(); return list.filter(function (e) { return boxOf(e.sub.id).due <= now; }); }
   function scopeList(b) {
+    if (String(b).indexOf('exam:') === 0) { var ex = examById(String(b).slice(5)); return ex ? examSubs(ex) : []; }
     if (b === 'star') return SUBS.filter(function (e) { return isStar(e.sub.id); });
     if (b === 'mappe') return SUBS.filter(function (e) { return inBag(e.sub.id); }).sort(function (x, y) { return S.bag[x.sub.id] - S.bag[y.sub.id]; });
     if (b && BYID[b] && BYID[b].type === 'area') return SUBS.filter(function (e) { return e.area.id === b; });
     return SUBS.slice();
   }
-  function scopeName(b) { return b === 'mappe' ? 'Druckmappe' : b === 'star' ? 'Merkzettel' : (b && BYID[b] && BYID[b].area) ? areaLabel(BYID[b].area) + ': ' + plain(BYID[b].area.title) : 'Alle Karten'; }
+  function scopeName(b) { if (String(b).indexOf('exam:') === 0) { var ex = examById(String(b).slice(5)); return ex ? examLabel(ex) : 'Klassenarbeit'; } return b === 'mappe' ? 'Druckmappe' : b === 'star' ? 'Merkzettel' : (b && BYID[b] && BYID[b].area) ? areaLabel(BYID[b].area) + ': ' + plain(BYID[b].area.title) : 'Alle Karten'; }
   var quiz = null;
   function viewQuiz(params) {
     setNav('abfragen'); document.title = 'Abfragen – Lernen 8';
@@ -672,9 +793,10 @@
   function examQ() {
     if (exam.i >= exam.list.length) {
       var pct = Math.round(exam.pts * 100 / Math.max(1, exam.list.length));
-      addStars(exam.list.length);
+      addStars(exam.list.length); S.tests = (S.tests || []).concat([{ d: dayKey(), b: exam.b, pts: exam.pts, n: exam.list.length }]).slice(-30); save();
       main.innerHTML = '<div class="content"><h1>Geschafft! ⭐ +' + exam.list.length + '</h1><p class="lead">' + exam.pts + ' von ' + exam.list.length + ' Aufgaben gelöst. ' + (pct >= 80 ? 'Das sitzt schon gut.' : pct >= 50 ? 'Gut drangeblieben – die anderen üben wir noch.' : 'Jeder Versuch hilft beim Merken. Die Karten liegen jetzt auf deinem Merkzettel.') + '</p>' +
-        '<div class="actions"><a class="btn primary" href="#/pruefung?b=' + exam.b + '">Nochmal</a><a class="btn" href="#/merken">Zum Merkzettel</a></div></div>';
+        ((exam.wrong || []).length ? '<div class="section-title">Diese Karten wackeln noch</div><div class="results">' + exam.wrong.map(function (id) { return BYID[id] ? subLink(BYID[id]) : ''; }).join('') + '</div>' : '') +
+        '<div class="actions"><a class="btn primary" href="#/pruefung?b=' + exam.b + '">Nochmal</a>' + (String(exam.b).indexOf('exam:') === 0 ? '<a class="btn" href="#/arbeit?id=' + esc(String(exam.b).slice(5)) + '">Zur Klassenarbeit</a>' : '<a class="btn" href="#/merken">Zum Merkzettel</a>') + '</div></div>';
       exam = null; return;
     }
     var q = exam.list[exam.i], e = BYID[q.ref], multi = q.type === 'mc' && q.correct.length > 1;
@@ -688,7 +810,7 @@
       '<article class="sub qbox"><div class="rp">' + areaLabel(e.area) + ' · ' + md(e.sub.title) + '</div><h2 class="qq">' + md(q.q) + '</h2>' + body + '<div id="fb"></div></article></div>';
     var picked = [];
     function finish(ok) {
-      S.qs[q.id] = ok ? 1 : 0; if (ok) exam.pts++; else setStar(q.ref, true); save();
+      S.qs[q.id] = ok ? 1 : 0; if (ok) exam.pts++; else { setStar(q.ref, true); if ((exam.wrong = exam.wrong || []).indexOf(q.ref) < 0) exam.wrong.push(q.ref); } save();
       main.querySelectorAll('.optbtn').forEach(function (bt) {
         var i = +bt.dataset.i; bt.disabled = true;
         if (q.correct.indexOf(i) >= 0) bt.classList.add('right'); else if (picked.indexOf(i) >= 0) bt.classList.add('wrong');
@@ -964,6 +1086,8 @@
     else if (p[0] === 'druckvorschau') { viewHome(); printCards(scopeList(params.b || 'all'), ['a6', 'a7', 'a7x8'].indexOf(params.m) >= 0 ? params.m : 'a4', true); }
     else if (p[0] === 'merken') viewStars();
     else if (p[0] === 'runde') viewRound(params);
+    else if (p[0] === 'arbeit') viewExams(params);
+    else if (p[0] === 'eltern') viewParents();
     else if (p[0] === 'abfragen') viewQuiz(params);
     else if (p[0] === 'fach') viewFach(params);
     else if (p[0] === 'plan') { setNav(''); window.ImmoPlan.viewPlan(main); }
@@ -994,7 +1118,7 @@
     if (navDepth > 0) { navDepth -= 2; history.back(); }
     else location.hash = parentOf(location.hash.replace(/^#\/?/, '').split('?')[0]);
   });
-  window.addEventListener('afterprint', function () { document.body.classList.remove('p-a4', 'p-a6', 'p-a7', 'p-a7x8'); });
+  window.addEventListener('afterprint', function () { document.body.classList.remove('p-a4', 'p-a6', 'p-a7', 'p-a7x8', 'p-eltern'); });
   route();
 
   if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
