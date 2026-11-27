@@ -196,7 +196,7 @@
       '<p class="lead">' + all + ' Lernkarten · ' + d + ' sicher · ' + stars + ' auf dem Merkzettel.</p>' +
       '<div class="quickgrid">' + qb('#/abfragen', 'Karteikasten', due + ' fällig') + qb('#/pruefung', 'Üben', FRAGEN.length + ' Aufgaben') +
       qb('#/merken', 'Merkzettel', stars + ' Karten') + qb('#/arbeit', 'Klassenarbeiten', exams().length + ' geplant') + qb('#/plan', 'Stundenplan', 'Mo–Fr') + qb('#/kalender', 'Termine', (function (n) { return n + (n === 1 ? ' Eintrag' : ' Einträge'); })(window.ImmoPlan ? window.ImmoPlan.data().cal.length : 0)) +
-      (GLOSSAR.length ? qb('#/az', 'A–Z', GLOSSAR.length + ' Begriffe') : '') + qb('#/eltern', 'Elternblick', 'mit Zahl') + '</div>' +
+      (GLOSSAR.length ? qb('#/az', 'A–Z', GLOSSAR.length + ' Begriffe') : '') + qb('#/eltern', 'Elternblick', 'mit Zahl') + (window.L8Sync && L8Sync.configured() ? qb('#/konto', 'Online', L8Sync.statusText()) : '') + '</div>' +
       (window.ImmoPlan ? window.ImmoPlan.nextHtml() : '') +
       '<div class="section-title">Fächer</div><div class="tiles">' + AREAS.map(tile).join('') + '</div>' +
       '<div class="section-title">Gut zu wissen</div><div class="hint">Grundlage sind die Rahmenpläne des Landes Mecklenburg-Vorpommern für die Regionale Schule, Klasse 8. Deine Schule kann Reihenfolge und Themen anders verteilen – Stellen mit ⚠ zeigen das.</div>' +
@@ -489,6 +489,7 @@
     main.querySelectorAll('#qact button').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var r = btn.dataset.r, id = e.sub.id;
+        if (window.L8Sync) L8Sync.card(r === 'ok');
         if (r === 'ok') { var f = Math.min(MAXF, bx.f + 1); S.box[id] = { f: f, due: Date.now() + INTERVAL[f] * DAY - 36e5 }; if (f >= SICHER) S.done[id] = 1; round.ok++; }
         else if (r === 'half') { S.box[id] = { f: bx.f, due: Date.now() + DAY - 36e5 }; round.half++; }
         else { S.box[id] = { f: 1, due: Date.now() + DAY - 36e5 }; delete S.done[id]; round.no++; }
@@ -501,7 +502,7 @@
   }
   function roundEnd() {
     stopTimers();
-    if (!round.closed) { round.closed = true; round.stars = round.done + (round.done ? 3 : 0); addStars(round.stars); if (round.done) logRound(); }
+    if (!round.closed) { round.closed = true; round.stars = round.done + (round.done ? 3 : 0); addStars(round.stars); if (round.done) logRound(); if (window.L8Sync) L8Sync.send(); }
     var g = goal(), r = roundsToday(), st = streak(), move = MOVES[Math.floor(Math.random() * MOVES.length)];
     var more = dueList(scopeList(round.b)).length;
     main.innerHTML = '<div class="content"><h1>' + (round.done ? 'Runde geschafft! ⭐ +' + round.stars : 'Pause') + '</h1>' +
@@ -624,7 +625,7 @@
       '<div class="section-title">Belohnung</div><div class="hint rewardf"><label for="rgoal">Bei so vielen Sternen</label><input id="rgoal" class="gq" inputmode="numeric" value="' + (rgoal || '') + '" placeholder="z. B. 150">' +
       '<label for="rtext">gibt es</label><input id="rtext" class="gq" value="' + esc(reward) + '" placeholder="z. B. einen Kinoabend">' +
       '<div class="actions"><button class="btn" id="rsave" type="button">Speichern</button><span id="rmsg" class="muted" aria-live="polite"></span></div></div>' +
-      '<div class="section-title">Mehr</div><div class="actions noprint"><button class="btn" id="pprint" type="button">Wochenblatt drucken</button><button class="btn" id="pchange" type="button">Eltern-Zahl ändern</button><button class="btn" id="plock" type="button">Sperren</button></div></div>';
+      '<div class="section-title">Mehr</div><div class="actions noprint">' + (window.L8Sync && L8Sync.configured() ? '<a class="btn primary" href="#/eltern-online">Online-Übersicht (alle Geräte)</a>' : '') + '<button class="btn" id="pprint" type="button">Wochenblatt drucken</button><button class="btn" id="pchange" type="button">Eltern-Zahl ändern</button><button class="btn" id="plock" type="button">Sperren</button></div></div>';
     $('#rsave').addEventListener('click', function () { setPref('reward', $('#rtext').value.trim()); setPref('rewardgoal', String(parseInt($('#rgoal').value, 10) || 0)); $('#rmsg').textContent = '✓ gespeichert'; });
     $('#pprint').addEventListener('click', function () { document.body.classList.add('p-eltern'); setTimeout(function () { window.print(); }, 60); });
     $('#pchange').addEventListener('click', function () { setPref('pin', ''); parentOpen = false; viewParents(); });
@@ -636,6 +637,17 @@
     var left = rgoal - (S.stars || 0);
     return '<p class="t-sub reward">' + (left > 0 ? '🎁 Noch ' + left + ' Sterne bis: ' + esc(reward) : '🎁 Geschafft: ' + esc(reward) + '!') + '</p>';
   }
+
+  /* ---------- Momentaufnahme für die Online-Statistik (sync.js) ---------- */
+  if (window.L8Sync) L8Sync.setSnapshot(function () {
+    var faecher = AREAS.map(function (a) {
+      var r = 0, n = 0; FRAGEN.forEach(function (q) { if (BYID[q.ref].area === a && q.id in S.qs) { n++; r += S.qs[q.id] ? 1 : 0; } });
+      return { f: plain(a.title), q: n ? Math.round(r * 100 / n) : 0, n: n };
+    }).filter(function (f) { return f.n; });
+    var ex = exams()[0], ka = null;
+    if (ex) { var l = examSubs(ex), c = stateCounts(l); ka = { t: examLabel(ex), d: ex.date, bereit: l.length ? Math.round(c.sicher * 100 / l.length) : 0 }; }
+    return { due: dueList(SUBS).length, streak: streak().n, extra: { faecher: faecher, ka: ka } };
+  });
 
   /* ---------- Karteikasten ---------- */
   function boxOf(id) { return S.box[id] || { f: 1, due: 0 }; }
@@ -710,13 +722,13 @@
       quiz.queue = h.queue; quiz.total = h.total; save(); quizCard(); window.scrollTo(0, 0);
     });
     $('#right').addEventListener('click', function () {
-      snap('right');
+      snap('right'); if (window.L8Sync) L8Sync.card(true);
       var f = Math.min(MAXF, bx.f + 1); S.box[e.sub.id] = { f: f, due: Date.now() + INTERVAL[f] * DAY - 36e5 };
       if (f >= SICHER) S.done[e.sub.id] = 1;
       save(); quiz.right++; quiz.queue.shift(); quizCard(); window.scrollTo(0, 0);
     });
     $('#again').addEventListener('click', function () {
-      snap('again');
+      snap('again'); if (window.L8Sync) L8Sync.card(false);
       S.box[e.sub.id] = { f: 1, due: 0 }; delete S.done[e.sub.id]; save(); quiz.again++;
       var id = quiz.queue.shift(); if (quiz.queue.length > 2) quiz.queue.splice(3, 0, id); else quiz.queue.push(id);
       quiz.total++; quizCard(); window.scrollTo(0, 0);
@@ -810,7 +822,7 @@
       '<article class="sub qbox"><div class="rp">' + areaLabel(e.area) + ' · ' + md(e.sub.title) + '</div><h2 class="qq">' + md(q.q) + '</h2>' + body + '<div id="fb"></div></article></div>';
     var picked = [];
     function finish(ok) {
-      S.qs[q.id] = ok ? 1 : 0; if (ok) exam.pts++; else { setStar(q.ref, true); if ((exam.wrong = exam.wrong || []).indexOf(q.ref) < 0) exam.wrong.push(q.ref); } save();
+      S.qs[q.id] = ok ? 1 : 0; if (window.L8Sync) L8Sync.exam(ok); if (ok) exam.pts++; else { setStar(q.ref, true); if ((exam.wrong = exam.wrong || []).indexOf(q.ref) < 0) exam.wrong.push(q.ref); } save();
       main.querySelectorAll('.optbtn').forEach(function (bt) {
         var i = +bt.dataset.i; bt.disabled = true;
         if (q.correct.indexOf(i) >= 0) bt.classList.add('right'); else if (picked.indexOf(i) >= 0) bt.classList.add('wrong');
@@ -1088,6 +1100,8 @@
     else if (p[0] === 'runde') viewRound(params);
     else if (p[0] === 'arbeit') viewExams(params);
     else if (p[0] === 'eltern') viewParents();
+    else if (p[0] === 'eltern-online') { setNav(''); window.L8Sync.viewOnline(main); }
+    else if (p[0] === 'konto') { setNav(''); window.L8Sync.viewKonto(main); }
     else if (p[0] === 'abfragen') viewQuiz(params);
     else if (p[0] === 'fach') viewFach(params);
     else if (p[0] === 'plan') { setNav(''); window.ImmoPlan.viewPlan(main); }

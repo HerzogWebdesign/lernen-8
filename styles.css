@@ -591,3 +591,10 @@ table.tt thead th.today{background:var(--accent);color:var(--accent-ink)}
   body.p-eltern #sheet,body.p-eltern .noprint,body.p-eltern .totop,body.p-eltern .rewardf .actions{display:none !important}
   body.p-eltern .today,body.p-eltern .exam-list a{break-inside:avoid}
 }
+/* Online-Übersicht */
+.plain-list{padding-left:18px;line-height:1.5}
+.plain-list li{margin:4px 0}
+.chk{display:flex;gap:8px;align-items:center;font-size:15px}
+.chk input{width:20px;height:20px}
+.ftable.hist td{width:auto;padding:6px 8px;text-align:right;white-space:nowrap}
+.eltern .t-sub{text-align:left}

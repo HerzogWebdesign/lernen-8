@@ -1,7 +1,7 @@
 /* Offline-Speicher: alle Dateien der App werden beim ersten Öffnen auf dem Gerät abgelegt. */
-var VERSION = 'lernen-8-v10';
+var VERSION = 'lernen-8-v11';
 var FILES = [
-  './', 'index.html', 'styles.css', 'app.js', 'pdf.js', 'plan.js', 'manifest.webmanifest',
+  './', 'index.html', 'styles.css', 'app.js', 'pdf.js', 'plan.js', 'sync.js', 'sync-config.js', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
   'de.js', 'fragen-de.js', 'ma.js', 'fragen-ma.js', 'en.js', 'fragen-en.js', 'ch.js', 'fragen-ch.js', 'ph.js', 'fragen-ph.js', 'bi.js', 'fragen-bi.js', 'ge.js', 'fragen-ge.js', 'geo.js', 'fragen-geo.js', 'sk.js', 'fragen-sk.js', 'awt.js', 'fragen-awt.js', 'inf.js', 'fragen-inf.js', 'mu.js', 'fragen-mu.js', 'ku.js', 'fragen-ku.js', 're.js', 'fragen-re.js', 'ph-k.js', 'fragen-ph-k.js'
 ];
